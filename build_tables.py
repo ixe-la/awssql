@@ -237,6 +237,22 @@ try:
 
 
 #
+#{u'VpcId': u'vpc-7398451a', u'InstanceTenancy': u'default', u'Tags': [{u'Key': u'Name', u'Value': u'old-dev'}], u'State': u'available', u'DhcpOptionsId': u'dopt-7798451e', u'CidrBlock': u'10.0.0.0/16', u'IsDefault': False}
+# create table vpcs (awsacct text, region text, vpcid text, vpccidrblock text, isdefault boolean, instancetenancy text, state text, dhcpoptionsid text, name text);
+    cleanquery='DELETE FROM vpcs where awsacct=%s and region=%s'
+    cur.execute(cleanquery, (awsacct, region) )
+    for vpcidx, vpc in enumerate(d['Vpcs']):
+        name=None
+        if vpc.get('Tags'):
+            for tagidx, tag in enumerate(vpc['Tags']):
+                if tag['Key']=='Name':
+                    name=tag['Value']
+                    break
+        query='INSERT INTO vpcs (awsacct, region,vpcid,vpccidrblock,isdefault,instancetenancy,state,dhcpoptionsid,name) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+        cur.execute(query, (awsacct, region, vpc['VpcId'], vpc['CidrBlock'], vpc['IsDefault'], vpc['InstanceTenancy'],vpc['State'],vpc['DhcpOptionsId'],name) )
+    conn.commit()
+
+#
 # ---------------------------------------------------------- end of inserts
 #
 
