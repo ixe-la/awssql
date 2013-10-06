@@ -206,6 +206,40 @@ try:
         cur.execute(query, (awsacct, region, sg.get('VpcId'), sg['GroupName'], sg['GroupId'], sg['Description']) )
     conn.commit()
 
+# subnets
+
+# "VpcId": "vpc-7398451a",
+# "CidrBlock": "10.0.8.128/25",
+# "MapPublicIpOnLaunch": false,
+# "DefaultForAz": false,
+# "State": "available",
+# "AvailabilityZone": "us-west-1a",
+# "SubnetId": "subnet-c9ef7ca1",
+# "AvailableIpAddressCount": 122
+
+# [u'VpcId', u'AvailabilityZone', u'AvailableIpAddressCount', u'DefaultForAz', u'State', u'MapPublicIpOnLaunch', u'SubnetId', u'CidrBlock']
+#
+# create table subnets (awsacct text, region text, vpcid text, subnetid text, cidrblock cidr, availabilityzone text, availableipaddresscount integer, state text, defaultforaz boolean, mappubliciponlaunch boolean, name text);
+#
+    cleanquery='DELETE FROM subnets where awsacct=%s and region=%s'
+    cur.execute(cleanquery, (awsacct, region) ) 
+    for snidx, sn in enumerate(d['Subnets']):
+        name=None
+# get name from tags.
+        if sn.get('Tags'):
+            for tagidx, tag in enumerate(sn['Tags']):
+                if tag['Key']=='Name':
+                    name=tag['Value']
+                    break
+        query='INSERT INTO subnets (awsacct, region, vpcid, subnetid, cidrblock, availabilityzone, availableipaddresscount, state, defaultforaz, mappubliciponlaunch, name) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+        cur.execute(query, (awsacct, region, sn.get('VpcId'), sn['SubnetId'], sn['CidrBlock'], sn['AvailabilityZone'], sn['AvailableIpAddressCount'], sn['State'], sn['DefaultForAz'], sn['MapPublicIpOnLaunch'], name) )
+    conn.commit()
+
+
+#
+# ---------------------------------------------------------- end of inserts
+#
+
 except psycopg2.DatabaseError, e:
     if conn:
            conn.rollback() 
