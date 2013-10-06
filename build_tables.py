@@ -6,6 +6,7 @@ import sys
 import json
 import pprint
 
+# we take  argument, acctnick, with the following format:
 #acctnick='KJDEV-us-west-1'
 assert len(sys.argv) == 2
 
@@ -65,15 +66,46 @@ try:
 #
     cleanquery='DELETE FROM sgnetsrc where awsacct=%s and region=%s'
     cur.execute(cleanquery, (awsacct, region) ) 
+    cleanquery='DELETE FROM sgnetdst where awsacct=%s and region=%s'
+    cur.execute(cleanquery, (awsacct, region) ) 
+    cleanquery='DELETE FROM sgsgsrc where awsacct=%s and region=%s'
+    cur.execute(cleanquery, (awsacct, region) ) 
+    cleanquery='DELETE FROM sgsgdst where awsacct=%s and region=%s'
+    cur.execute(cleanquery, (awsacct, region) ) 
     for sgidx, sg in enumerate(d['SecurityGroups']):
 # XXX no VPC in SG spec?
-        for ippermsidx, ipperms in enumerate(sg['IpPermissions']):
+        for ippermsidx, ipperms in enumerate(sg['IpPermissions']):     #toport, fromport, protocol, IpRanges set, 
             for iprangeidx, iprange in enumerate(ipperms['IpRanges']):
 # fix case when bits are set to right of mask!
                     (netnumber, mask) = iprange['CidrIp'].split('/')
 #                    print sg.get('VpcId'), sg['GroupId'], sg['GroupName'], sg['Description'], ipperms['IpProtocol'], ipperms.get('FromPort'), ipperms.get('ToPort'), iprange['CidrIp']
                     query="INSERT INTO sgnetsrc (awsacct, region, vpcid, sgid, groupname, description, proto, cidrip, fromport, toport, relaxedcidr) VALUES (%s,%s,%s,%s,%s,%s,%s,  set_masklen(%s::cidr,%s)  ,%s,%s,%s)"
                     cur.execute(query, ( awsacct, region, sg.get('VpcId'), sg['GroupId'], sg['GroupName'], sg['Description'], ipperms['IpProtocol'], netnumber, mask, ipperms.get('FromPort'), ipperms.get('ToPort'), iprange['CidrIp']) );
+#
+# create table sgsgsrc (awsacct text, region text, vpcid text, sgid text, groupname text, description text, srcproto text, srcfromport text, srctoport text, srcsgid text, srcuserid text);
+            for uigpidx, uigp in enumerate(ipperms['UserIdGroupPairs']):
+                    query="INSERT INTO sgsgsrc (awsacct, region, vpcid, sgid, groupname, description, srcproto, srcfromport, srctoport, srcsgid, srcuserid ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                    cur.execute(query, ( awsacct, region, sg.get('VpcId'), sg['GroupId'], sg['GroupName'], sg['Description'], ipperms['IpProtocol'], ipperms.get('FromPort'), ipperms.get('ToPort'), uigp['GroupId'], uigp['UserId']) );
+#
+# create table sgnetdst (awsacct text, region text, vpcid text, sgid text, groupname text, description text, dstproto text, dstcidrip cidr, dstfromport integer, dsttoport integer, dstrelaxedcidr text);
+# create table sgsgdst (awsacct text, region text, vpcid text, sgid text, groupname text, description text, dstproto text, dstfromport text, dsttoport text, dstsgid text, dstuserid text);
+#
+        for ippermsidx, ipperms in enumerate(sg['IpPermissionsEgress']):
+#            print "IpPermissionsEgress: ", ippermsidx, "/", len(sg['IpPermissionsEgress'])
+            for iprangeidx, iprange in enumerate(ipperms['IpRanges']):
+# fix case when bits are set to right of mask!
+                    (netnumber, mask) = iprange['CidrIp'].split('/')
+#                    print sg.get('VpcId'), sg['GroupId'], sg['GroupName'], sg['Description'], ipperms['IpProtocol'], ipperms.get('FromPort'), ipperms.get('ToPort'), iprange['CidrIp']
+                    query="INSERT INTO sgnetdst (awsacct, region, vpcid, sgid, groupname, description, dstproto, dstcidrip, dstfromport, dsttoport, dstrelaxedcidr) VALUES (%s,%s,%s,%s,%s,%s,%s,  set_masklen(%s::cidr,%s)  ,%s,%s,%s)"
+                    cur.execute(query, ( awsacct, region, sg.get('VpcId'), sg['GroupId'], sg['GroupName'], sg['Description'], ipperms['IpProtocol'], netnumber, mask, ipperms.get('FromPort'), ipperms.get('ToPort'), iprange['CidrIp']) ); 
+            for uigpidx, uigp in enumerate(ipperms['UserIdGroupPairs']):
+                    query="INSERT INTO sgsgdst (awsacct, region, vpcid, sgid, groupname, description, dstproto, dstfromport, dsttoport, dstsgid, dstuserid ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                    cur.execute(query, ( awsacct, region, sg.get('VpcId'), sg['GroupId'], sg['GroupName'], sg['Description'], ipperms['IpProtocol'], ipperms.get('FromPort'), ipperms.get('ToPort'), uigp['GroupId'], uigp['UserId']) );
+
+# 
+# ----------------------------------------------------------------------------------------------------------------------
+
+
 #
 # create table networkinterfaces ( vpcid text, description text, macaddress macaddr, networkinterfaceid text, subnetid text, privateip inet, publicip inet);
 #
