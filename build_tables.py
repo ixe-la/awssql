@@ -107,19 +107,19 @@ try:
 
 
 #
-# create table networkinterfaces ( vpcid text, description text, macaddress macaddr, networkinterfaceid text, subnetid text, privateip inet, publicip inet);
+# create table networkinterfaces ( awsacct text, region text, vpcid text, description text, macaddress macaddr, networkinterfaceid text, subnetid text, privateip inet, publicip inet, sourcedestcheck boolean);
 #
     cleanquery='DELETE FROM networkinterfaces where awsacct=%s and region=%s'
     cur.execute(cleanquery, (awsacct, region) ) 
     for niidx, ni in enumerate(d['NetworkInterfaces']):
         for privipidx, privip in enumerate(ni['PrivateIpAddresses']):
 #            print niidx, privipidx, ni['VpcId'], ni['Description'], ni['MacAddress'], ni['NetworkInterfaceId'], ni['SubnetId'], privip['PrivateIpAddress'], privip.get('PublicIp')
-            query="INSERT INTO networkinterfaces (awsacct, region, vpcid, description, macaddress, networkinterfaceid, subnetid, privateip, publicip) VALUES (%s,%s,%s, %s,%s,%s,%s,%s,%s)"
+            query="INSERT INTO networkinterfaces (awsacct, region, vpcid, description, macaddress, networkinterfaceid, subnetid, privateip, publicip, sourcedestcheck) VALUES (%s,%s,%s, %s,%s,%s,%s,%s,%s,%s)"
             if privip.get('Association') != None:
                publicip=privip['Association']['PublicIp']
             else:
                publicip=None
-            cur.execute(query, (awsacct, region, ni['VpcId'], ni['Description'], ni['MacAddress'], ni['NetworkInterfaceId'], ni['SubnetId'], privip['PrivateIpAddress'], publicip ) )
+            cur.execute(query, (awsacct, region, ni['VpcId'], ni['Description'], ni['MacAddress'], ni['NetworkInterfaceId'], ni['SubnetId'], privip['PrivateIpAddress'], publicip, ni['SourceDestCheck'] ) )
 
     conn.commit()
 
