@@ -171,7 +171,7 @@ try:
     cur.execute(cleanquery, (awsacct, region) ) 
     cleanquery='DELETE FROM lbins where awsacct=%s and region=%s'
     cur.execute(cleanquery, (awsacct, region) ) 
-    for lbidx, lb in enumerate(d['LoadBalancers']):
+    for lbidx, lb in enumerate(d['LoadBalancers']['LoadBalancerDescriptions']):
 #        print lb.get('VPCId'), lb['LoadBalancerName'], lb['DNSName'], lb['CreatedTime'], lb.get('CanonicalHostedZoneName'), lb['Scheme'], lb['SourceSecurityGroup']['GroupName']
         query="INSERT INTO lb (awsacct, region, vpcid, loadbalancername, dnsname,createdtime, canonicalhostedzonename, scheme, sourcesecuritygroupname) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"
         cur.execute(query, ( awsacct, region, lb.get('VPCId'), lb['LoadBalancerName'], lb['DNSName'], lb['CreatedTime'], lb.get('CanonicalHostedZoneName'), lb['Scheme'], lb['SourceSecurityGroup']['GroupName'] ) )
@@ -238,7 +238,7 @@ try:
 
 #
 #{u'VpcId': u'vpc-7398451a', u'InstanceTenancy': u'default', u'Tags': [{u'Key': u'Name', u'Value': u'old-dev'}], u'State': u'available', u'DhcpOptionsId': u'dopt-7798451e', u'CidrBlock': u'10.0.0.0/16', u'IsDefault': False}
-# create table vpcs (awsacct text, region text, vpcid text, vpccidrblock text, isdefault boolean, instancetenancy text, state text, dhcpoptionsid text, name text);
+# create table vpcs (awsacct text, region text, vpcid text, vpccidrblock cidr, isdefault boolean, instancetenancy text, state text, dhcpoptionsid text, name text);
     cleanquery='DELETE FROM vpcs where awsacct=%s and region=%s'
     cur.execute(cleanquery, (awsacct, region) )
     for vpcidx, vpc in enumerate(d['Vpcs']):
@@ -250,6 +250,35 @@ try:
                     break
         query='INSERT INTO vpcs (awsacct, region,vpcid,vpccidrblock,isdefault,instancetenancy,state,dhcpoptionsid,name) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)'
         cur.execute(query, (awsacct, region, vpc['VpcId'], vpc['CidrBlock'], vpc['IsDefault'], vpc['InstanceTenancy'],vpc['State'],vpc['DhcpOptionsId'],name) )
+    conn.commit()
+
+
+#
+# create table routetables (awsacct text, region text, vpcid text, routetableid text, name text);
+# create table routes (routetableid text, destinationcidrblock cidr, state text, gatewayid text, instanceid text, instanceownerid text, networkinterfaceid text, awsacct text, region text, vpcid text);
+# create table routetableassociations (routetableid text, main boolean, subnetid text, routetableassociationid text, vpcid text, awsacct text, region text);
+    cleanquery='DELETE FROM routetables where awsacct=%s and region=%s'
+    cur.execute(cleanquery, (awsacct, region) )
+    for rtbidx, rtb in enumerate(d['RouteTables']):
+        name=None
+        if rtb.get('Tags'):
+            for tagidx, tag in enumerate(rtb['Tags']):
+                if tag['Key']=='Name':
+                    name=tag['Value']
+                    break
+        query='INSERT INTO routetables (awsacct, region, vpcid, routetableid, name) VALUES (%s, %s, %s, %s, %s)'
+        cur.execute(query, (awsacct, region, rtb.get('VpcId'), rtb['RouteTableId'], name) )
+
+        query='INSERT INTO routes (routetableid, destinationcidrblock, state, gatewayid, instanceid, instanceownerid, networkinterfaceid, awsacct,region,vpcid) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+        for ridx, r in enumerate(rtb['Routes']):
+            cur.execute(query, (rtb['RouteTableId'], 
+                r['DestinationCidrBlock'], 
+                r['State'], r.get('GatewayId'), r.get('InstanceId'), r.get('InstanceOwnerId'), r.get('NetworkInterfaceId'), awsacct, region, rtb.get('VpcId'))  )
+
+        query=('INSERT INTO routetableassociations ( routetableid, main, subnetid, routetableassociationid, awsacct, region, vpcid) VALUES (%s, %s, %s, %s, %s, %s, %s)')
+        for raidx, ra in enumerate(rtb['Associations']):
+            cur.execute(query, (rtb['RouteTableId'], ra.get('Main'), ra.get('SubnetId'), ra.get('RouteTableAssociation'), awsacct, region, rtb.get('VpcId')) )
+       
     conn.commit()
 
 #
