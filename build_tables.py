@@ -259,6 +259,10 @@ try:
 # create table routetableassociations (routetableid text, main boolean, subnetid text, routetableassociationid text, vpcid text, awsacct text, region text);
     cleanquery='DELETE FROM routetables where awsacct=%s and region=%s'
     cur.execute(cleanquery, (awsacct, region) )
+    cleanquery='DELETE FROM routes where awsacct=%s and region=%s'
+    cur.execute(cleanquery, (awsacct, region) )
+    cleanquery='DELETE FROM routetableassociations where awsacct=%s and region=%s'
+    cur.execute(cleanquery, (awsacct, region) )
     for rtbidx, rtb in enumerate(d['RouteTables']):
         name=None
         if rtb.get('Tags'):
