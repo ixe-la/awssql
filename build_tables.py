@@ -61,6 +61,15 @@ try:
                      for sgidx, sg in enumerate(i['SecurityGroups']):
                                   query="INSERT INTO sgins (awsacct, region, vpcid, sgid, instanceid) VALUES (%s, %s, %s, %s, %s)"
                                   cur.execute(query, ( awsacct, region, i.get('VpcId'), sg['GroupId'], i['InstanceId'] ))
+
+
+    cleanquery='DELETE FROM addresses where awsacct=%s and region=%s'
+    cur.execute(cleanquery, (awsacct, region) )
+    for iidx, i in enumerate(d['Addresses']):
+        query="INSERT INTO addresses (awsacct, region, allocationid, associationid, domain, instanceid, networkinterfaceid, networkinterfaceownerid, privateipaddress, publicip) VALUES (%s, %s,%s,%s,%s,%s,%s,%s,%s,%s)"
+        cur.execute(query, (awsacct, region, i.get('AllocationId'), i.get('AssociationId'),i.get('Domain'),i.get('InstanceId'),i.get('NetworkInterfaceId'),i.get('NetworkInterfaceOwnerId'),i.get('PrivateIpAddress'),i.get('PublicIp') ) )
+        
+
 #
 # create table sgnetsrc (awsacct text, region text, vpcid text, sgid text, groupname text, description text, proto text, cidrip cidr, fromport integer, toport integer, relaxedcidr text);
 #
@@ -112,6 +121,10 @@ try:
     cleanquery='DELETE FROM networkinterfaces where awsacct=%s and region=%s'
     cur.execute(cleanquery, (awsacct, region) ) 
     for niidx, ni in enumerate(d['NetworkInterfaces']):
+        for sgidx, sg in enumerate(ni['Groups']):
+#            print "sg yo:", sg, sg['GroupId']
+            query="INSERT INTO nisg (awsacct, region, vpcid, networkinterfaceid, sgid) VALUES (%s, %s, %s, %s, %s)"
+            cur.execute(query, (awsacct, region, ni['VpcId'], ni['NetworkInterfaceId'], sg['GroupId']))
         for privipidx, privip in enumerate(ni['PrivateIpAddresses']):
 #            print niidx, privipidx, ni['VpcId'], ni['Description'], ni['MacAddress'], ni['NetworkInterfaceId'], ni['SubnetId'], privip['PrivateIpAddress'], privip.get('PublicIp')
             query="INSERT INTO networkinterfaces (awsacct, region, vpcid, description, macaddress, networkinterfaceid, subnetid, privateip, publicip, sourcedestcheck) VALUES (%s,%s,%s, %s,%s,%s,%s,%s,%s,%s)"
@@ -138,6 +151,7 @@ try:
                       name=None
                       if t['Key']=='Name':
                          name=t['Value']
+                         break 
                
                query="INSERT INTO instances (awsacct, region, vpcid, instanceid, instancetype, imageid, name, keyname, launchtime, state) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
 #               cur.execute(query, ( i.get('VpcId'), i['InstanceId'], i['ImageId'], name, i.get('KeyName'), i['LaunchTime'], i['State']  ))
